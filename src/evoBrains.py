@@ -9,6 +9,7 @@ class World:
         self.population = 10
         self.numObstacles = 10
         self.bgColor = (125, 220, 255, 0)
+        self.obsColor = (44, 44, 44, 0)
         self.obstacles = list()
 
     def setDimension (self, dim):
@@ -22,16 +23,16 @@ class World:
 
     def _initObstacles (self):
         for o in range (self.numObstacles):
-            x = random.randint (0, self.dimension[0])
-            y = random.randint (0, self.dimension[1])
-            w = random.randint (0, 100)
-            h = random.randint (0, 100)
+            x = random.randint (50, self.dimension[0])
+            y = random.randint (50, self.dimension[1])
+            w = random.randint (10, 100)
+            h = random.randint (10, 100)
             obst = pygame.Rect (x, y, w, h)
             self.obstacles.append (obst)
 
     def _drawObstacles (self):
         for o in self.obstacles:
-            pygame.draw.rect (self.screen, (44, 44, 44, 0), o, 0)
+            pygame.draw.rect (self.screen, self.obsColor, o, 0)
 
     def start (self):
         stopWorld = False
@@ -48,6 +49,7 @@ class World:
             
 
 def main ():
+    pygame.init ()
     world = World ()
     world.setDimension ((1024, 768))
     world.setPopulation (1)
