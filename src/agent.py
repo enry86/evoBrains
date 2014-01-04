@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pygame
+import random
 import math
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.structure import SigmoidLayer
@@ -10,16 +11,18 @@ class Agent:
     def __init__ (self, worldsize, netParams = None):
         self.worldsize = worldsize
         self.direction = 0.0
-        self.energy = 1000.0
+        self.initNrg = 500.0
+        self.energy = self.initNrg
         self.lifespan = 0.0
         self.position = [worldsize[0] / 2, worldsize[1] / 2]
         self.rangeObs = 50.0
-        self.rangeFood = 100.0
+        self.rangeFood = 200.0
         self.radius = 10.0
-        self.nrgFood = 100.0
-        self.damageObs = 2.0
-        self.damageAge = 0.8
-        self.brain = buildNetwork (6, 8, 2, outclass = SigmoidLayer)
+        self.foodTaken = 0
+        self.nrgFood = 2000.0
+        self.damageObs = 5.0
+        self.damageAge = .5
+        self.brain = buildNetwork (6, 12, 2, outclass = SigmoidLayer)
         self.maxSpeed = .50
         self.speed = 0.0
         self.dirRange = math.pi / 100
@@ -69,13 +72,12 @@ class Agent:
     def _updateMovement (self, food, obsts):
         distances = self._getSensorValue (obsts)
         food = self._lookForFood (food)[0]
-        inputs = distances + food + [self.energy]
+        inputs = distances + food + [self.energy / self.initNrg]
         dr, sp = self.brain.activate (inputs)
         dr = -self.dirRange + (dr * 2 * self.dirRange)
         self.direction = (self.direction + dr) % (2 * math.pi)
         self.speed = -1 + (sp * 2)
-        #self.speed = 0.1
-        #self.direction = 0.0
+
 
     def _getFood (self, food):
         nrg = 0
@@ -99,7 +101,29 @@ class Agent:
             damage = self.damageObs
         return damage
         
+    def _genNewChromosome (self, c1, c2):
+        ratio1 = random.gauss(.5, .2)
+        ratio2 = random.gauss(.5, .2)
+        res = c1 * ratio1 + c2 * (ratio2)
+        return res
+
+    def mate (self, partner):
+        own_p = self.brain.params
+        par_p = partner.brain.params
+        new_p = map (self._genNewChromosome, own_p, par_p)
+        child = Agent (self.worldsize, new_p)
+        return child
+        
+    def reinit (self):
+        self.energy = self.initNrg
+        self.lifespan = 0.0
+        self.position = [self.worldsize[0] / 2, self.worldsize[1] / 2]
+        self.speed = 0.0
+        self.rotation = 0.0
+        self.foodTaken = 0
+
     def updateAgent (self, food, obsts):
+        old_dir = self.direction
         self.lifespan += 1
         self._updateMovement (food, obsts)
         spdx = math.cos (self.direction)
@@ -110,10 +134,13 @@ class Agent:
         if damage == 0:
             self.position = newpos
         nrgFood, idFood = self._getFood (food)
+        if nrgFood > 0:
+            self.foodTaken += 1
         self.energy += nrgFood
         self.energy -= damage
-        self.energy -= dst
+        #self.energy -= abs (dst)
         self.energy -= self.damageAge
+        #self.energy -= abs (self.direction - old_dir)
         return idFood
         
         
